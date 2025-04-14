@@ -2,7 +2,7 @@
 	"domain": "https://vtop.vitap.ac.in",
 	"vtopUrls": {
 		"login": "/vtop/login",
-		"homepage": "/vtop/content?"
+		"homepage": "/vtop/content"
 	},
 	"backEndApi": {
 		"attendance": "/vtop/processViewStudentAttendance",
