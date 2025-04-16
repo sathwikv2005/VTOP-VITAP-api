@@ -1,6 +1,7 @@
 import dotenv from 'dotenv'
 import { parseHTML } from 'linkedom'
 import VtopConfig from '../vtop_config.json' with { type: 'json' }
+import Headers from '../headers.json' with { type: 'json' }
 
 dotenv.config()
 
@@ -20,13 +21,8 @@ export async function getSemIds(req, res) {
 		const response = await fetch(VtopConfig.domain+VtopConfig.backEndApi.studentTimeTable, {
 			method: 'POST',
 			headers: {
-				'Content-Type': 'application/x-www-form-urlencoded',
-				'User-Agent':
-					'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
-				Referer: 'https://vtop.vitap.ac.in/vtop/open/page',
-				Origin: 'https://vtop.vitap.ac.in',
-				'Content-Type': 'application/x-www-form-urlencoded',
-				Cookie: `JSESSIONID=${jsessionId}`,
+				...Headers,
+                Cookie: `JSESSIONID=${jsessionId}`
 			},
 			body: params.toString(),
 		})
@@ -52,7 +48,7 @@ export async function getSemIds(req, res) {
 
         return res.status(200).json(semesters)
 	} catch (error) {
-		console.log('Failed to fetch semIDs. Error:\n', error)
+		console.error('Failed to fetch semIDs. Error:\n', error)
 		res.status(500).json({ error: 'Failed to fetch semIDs.' })
 	}
 }

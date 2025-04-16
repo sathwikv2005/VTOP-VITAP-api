@@ -3,6 +3,7 @@ import fetch from 'node-fetch'
 import fetchCookie from 'fetch-cookie'
 import { parseHTML } from 'linkedom'
 import VtopConfig from '../vtop_config.json' with { type: 'json' }
+import Headers from '../headers.json' with { type: 'json' }
 import { CookieJar } from 'tough-cookie'
 
 dotenv.config()
@@ -77,13 +78,8 @@ export async function vtopLogin(req, res) {
 		const response = await fetchWithCookies(VtopConfig.domain + VtopConfig.vtopUrls.login, {
 			method: 'POST',
 			headers: {
-				'Content-Type': 'application/x-www-form-urlencoded',
-				'User-Agent':
-					'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
-				Referer: 'https://vtop.vitap.ac.in/vtop/open/page',
-				Origin: 'https://vtop.vitap.ac.in',
-				'Content-Type': 'application/x-www-form-urlencoded',
-				Cookie: `JSESSIONID=${jsessionId}`,
+				...Headers,
+                Cookie: `JSESSIONID=${jsessionId}`
 			},
 			body: loginParams.toString(),
 		})
