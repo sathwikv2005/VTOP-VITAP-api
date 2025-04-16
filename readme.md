@@ -4,8 +4,8 @@ This is an **unofficial API** for VIT AP's student portal, **VTOP**.
 
 > **Note:** Most of the documentation for this project was written by ChatGPT.
 
-- 📄 API Documentation: [`./docs/api`](./docs/api)
-- 🔧 VTOP Internal Working: [`./docs/VTOP`](./docs/VTOP)
+- 📄 API Documentation: [`./docs/api`](https://github.com/sathwikv2005/VTOP-VITAP-api/tree/master/docs/API)
+- 🔧 VTOP Internal Working: [`./docs/VTOP`](https://github.com/sathwikv2005/VTOP-VITAP-api/tree/master/docs/VTOP)
 
 ## ⚙️ Setup
 
