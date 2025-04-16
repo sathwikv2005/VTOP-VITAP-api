@@ -26,16 +26,21 @@ No parameters.
 
 ```json
 {
-  "captcha": "/vtop/captcha/image/123456789.png",
-  "csrf": "ae98f65b-456d-42d2-a789-abc123",
-  "jsessionId": {
-    "key": "JSESSIONID",
-    "value": "F9C3145BFC7F6C5472191AD1F9A10E5E",
-    "domain": "vtop.vitap.ac.in",
-    ...
-  }
+	"captcha": "/vtop/captcha/image/123456789.png",
+	"csrf": "ae98f65b-456d-42d2-a789-abc123",
+	"jsessionId": {
+		"key": "JSESSIONID",
+		"value": "F9C3145BFC7F6C5472191AD1F9A10E5E",
+		"domain": "vtop.vitap.ac.in"
+	}
 }
 ```
+
+#### ⚠ Possible Errors
+
+| Status | Message                 | Description                         |
+| ------ | ----------------------- | ----------------------------------- |
+| 500    | Failed to fetch captcha | When CAPTCHA or session setup fails |
 
 ---
 
@@ -45,59 +50,68 @@ Logs the user into VTOP using the credentials, captcha, and CSRF token from the 
 
 #### 📥 Query Parameters
 
-| Name         | Type   | Required | Description                                        |
-| ------------ | ------ | -------- | -------------------------------------------------- |
-| `username`   | string | No       | VTOP username. Defaults to `USER_NAME` from `.env` |
-| `pwd`        | string | No       | VTOP password. Defaults to `PASSWORD` from `.env`  |
-| `captchaStr` | string | Yes      | Captcha text (case-insensitive)                    |
-| `csrf`       | string | Yes      | CSRF token from `/getcaptcha`                      |
-| `jsessionId` | string | Yes      | JSESSIONID cookie value from `/getcaptcha`         |
+| Name         | Type   | Required | Description                                         |
+| ------------ | ------ | -------- | --------------------------------------------------- |
+| `username`   | string | No       | VTOP username (defaults to `USER_NAME` from `.env`) |
+| `pwd`        | string | No       | VTOP password (defaults to `PASSWORD` from `.env`)  |
+| `captchaStr` | string | Yes      | Captcha text (case-insensitive)                     |
+| `csrf`       | string | Yes      | CSRF token from `/getcaptcha`                       |
+| `jsessionId` | string | Yes      | JSESSIONID value from `/getcaptcha`                 |
 
-#### ✅ Example Request
+#### ✅ Example
 
 ```
-GET /login?username=22BCE1234&pwd=yourpass&captchaStr=AB12C&csrf=ae98f65b-456d&jsessionId=ADF354FDG
+GET /login?username=22BCE1234&pwd=yourpass&captchaStr=AB12C&csrf=ae98f65b&jsessionId=ADF354FDG
 ```
 
-#### 📤 Response
+#### 📤 Successful Response
 
 ```json
 {
-  "message": "Login successful",
-  "cookies": [
-    {
-      "key": "JSESSIONID",
-      "value": "F9C3145BFC7F6C5472191AD1F9A10E5E",
-      ...
-    },
-    ...
-  ],
-  "csrf": "new-csrf-token-after-login"
+	"message": "Login successful",
+	"cookies": [
+		{
+			"key": "JSESSIONID",
+			"value": "F9C3145BFC7F6C5472191AD1F9A10E5E"
+		}
+	],
+	"csrf": "new-csrf-token-after-login"
 }
 ```
+
+#### ⚠ Possible Errors
+
+| Status | Message                                  | Description                           |
+| ------ | ---------------------------------------- | ------------------------------------- |
+| 400    | BAD REQUEST. Missing parameters.         | Required query parameters are missing |
+| 401    | Unauthorized. Invalid csrf or session ID | Invalid CSRF token or session ID      |
+| 401    | Invalid LoginId/Password                 | Incorrect username or password        |
+| 401    | Invalid Captcha                          | Captcha was incorrect                 |
+| 500    | Failed to login                          | Unexpected server-side error          |
 
 ---
 
 ## 🛠 Internal Flow
 
-1. `/getcaptcha`
+### `/getcaptcha`
 
-   - GET login page → extract CSRF token
-   - Extract `JSESSIONID` from `Set-Cookie`
-   - Call pre-login endpoint
-   - Call captcha generation endpoint
+- GET login page → extract CSRF token
+- Extract `JSESSIONID` from `Set-Cookie`
+- Call pre-login setup endpoint
+- Call captcha generation endpoint
 
-2. `/login`
-   - POST login form with credentials and captcha
-   - Reuse cookies from the jar (managed via `fetch-cookie`)
+### `/login`
+
+- POST login form with credentials and captcha
+- HTML is parsed to detect login error spans
+- Cookie jar maintains and forwards sessions
+- New CSRF and session cookies are returned
 
 ---
 
 ## 🧪 Notes
 
-- `fetch-cookie` is used to persist session cookies across requests.
-- Make sure the same `csrf` and `JSESSIONID` are used during login.
-- Manual cookie setting is only done once; normally the cookie jar handles it.
-- This route simulates a real browser using headers like `User-Agent`, `Origin`, and `Referer`.
-
----
+- `fetch-cookie` is used to manage session cookies.
+- Use the same `csrf` and `jsessionId` from `/getcaptcha` for login.
+- Login validation is based on detecting error messages in the HTML.
+- Realistic headers like `User-Agent`, `Referer`, and `Origin` are used to simulate browser behavior.
