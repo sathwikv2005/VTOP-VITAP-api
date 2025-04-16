@@ -50,7 +50,7 @@ export async function getCaptcha(req, res) {
 		const src = img?.getAttribute('src') //Captch url
 
 		//The csrf token is required for the /api/login endpoint
-		res.json({ captcha: src, csrf, jsessionId })
+		res.json({ captcha: src, csrf, jsessionId, next: `http://127.0.0.1:6700/api/login?csrf=${csrf}&jsessionId=${jsessionId.value}&captchaStr=`  })
 	} catch (err) {
 		console.error('Error fetching page:', err)
 		res.status(500).json({ error: 'Failed to fetch captcha' })
