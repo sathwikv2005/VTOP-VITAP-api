@@ -1,6 +1,6 @@
 import dotenv from 'dotenv'
 import { parseHTML } from 'linkedom'
-import parseTimeTable from '../util/parseTimeTable.js'
+import parseTimeTable from '../util/parse/parseTimeTable.js'
 import VtopConfig from '../vtop_config.json' with { type: 'json' }
 import Headers from '../headers.json' with { type: 'json' }
 

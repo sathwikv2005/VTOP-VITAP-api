@@ -2,6 +2,7 @@ import dotenv from 'dotenv'
 import { parseHTML } from 'linkedom'
 import VtopConfig from '../vtop_config.json' with { type: 'json' }
 import Headers from '../headers.json' with { type: 'json' }
+import parseSemIDs from '../util/parse/parseSemIDs.js'
 
 dotenv.config()
 
@@ -36,15 +37,7 @@ export async function getSemIds(req, res) {
 		const html = await response.text()
 		var { document } = parseHTML(html)
 
-		const select = document.querySelector('#semesterSubId')
-		const options = Array.from(select.querySelectorAll('option'))
-
-		const semesters = options
-			.filter((opt) => opt.value && opt.value !== '')
-			.map((opt) => ({
-				semId: opt.value,
-				semName: opt.textContent.trim(),
-			}))
+		const semesters = parseSemIDs(document)
 
         return res.status(200).json(semesters)
 	} catch (error) {
