@@ -12,7 +12,7 @@ export async function timeTable(req, res) {
 	if (!semID) semID = process.env.SEM
 
 	if (!csrf || !jsessionId || !username || !semID)
-		return res.status(400).json({ error: 'BAD REQUEST. Missing parameters. Failed to login' })
+		return res.status(400).json({ error: 'BAD REQUEST. Missing parameters.' })
 
 	try {
 		const params = new URLSearchParams()

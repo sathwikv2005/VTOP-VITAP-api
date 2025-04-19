@@ -8,6 +8,8 @@
 		"newCaptcha": "/vtop/get/new/captcha",
 		"prelogin": "/vtop/prelogin/setup",
 		"studentTimeTable": "/vtop/academics/common/StudentTimeTable",
-		"viewTimeTable": "/vtop/processViewTimeTable"
+		"viewTimeTable": "/vtop/processViewTimeTable",
+		"ViewStudentAttendance": "/vtop/processViewStudentAttendance",
+		"ViewAttendanceDetail": "/vtop/processViewAttendanceDetail"
 	}
 }
