@@ -19,7 +19,7 @@ http://localhost:<port>/api
 
 ### 1. `GET /api/attendance`
 
-Fetches the list of all subjects with their attendance percentage and metadata.
+Fetches the list of all subjects with their attendance summary and metadata.
 
 #### 📥 Query Parameters
 
@@ -32,20 +32,19 @@ Fetches the list of all subjects with their attendance percentage and metadata.
 
 #### 📤 Response
 
-Returns a list of attendance entries for each subject:
-
 ```json
 [
   {
-    "courseCode": "CSE3008",
-    "courseName": "Machine Learning",
-    "courseType": "ETH",
-    "slot": "D2+TD2",
-    "faculty": "Dr. XYZ",
-    "venue": "104, AB2",
-    "attended": 30,
-    "total": 41,
-    "percentage": 74
+    "courseDetails": "ABC1234 - Some Course - Embedded Theory",
+    "classDetails": "AP2024000000123 - A1+A2 - 101",
+    "faculty": "PROF. ABC XYZ - SCOPE",
+    "attended": "32",
+    "totalClasses": "41",
+    "percentage": "79",
+    "semesterId": "AP2024000",
+    "courseID": "AM_ABC1234_00000",
+    "classType": "ETH",
+    "regNo": "21XXX9999"
   },
   ...
 ]
@@ -56,6 +55,14 @@ Returns a list of attendance entries for each subject:
 ### 2. `GET /api/attendance/:courseID`
 
 Fetches detailed attendance logs for a particular course.
+
+> 📌 **Note:** `courseID` should be one of the `courseID` values returned by the `/api/attendance` endpoint.
+
+#### 📥 Path Parameter
+
+| Name       | Type   | Required | Description                                      |
+| ---------- | ------ | -------- | ------------------------------------------------ |
+| `courseID` | string | ✅       | The courseID returned from `/api/attendance` API |
 
 #### 📥 Query Parameters
 
@@ -71,9 +78,9 @@ Fetches detailed attendance logs for a particular course.
 
 ```json
 {
-	"courseDetails": "CSE3008 - Introduction to ML - Embedded Theory",
-	"classDetails": "AP2000000000000 - D2+TD2 - 104",
-	"faculty": "PROF. XYZ - SCOPE",
+	"courseDetails": "ABC1234 - Some Course - Embedded Theory",
+	"classDetails": "AP2024000000123 - A1+A2 - 101",
+	"faculty": "PROF. ABC XYZ - SCOPE",
 	"attendance": {
 		"present": 29,
 		"absent": 11,
@@ -85,38 +92,20 @@ Fetches detailed attendance logs for a particular course.
 			{
 				"isPresent": true,
 				"status": "Present",
-				"date": "17-04-2025",
-				"day": "FRI",
+				"date": "01-01-2025",
+				"day": "MON",
 				"time": "14:00-14:50",
-				"slot": "D2",
+				"slot": "A1",
 				"reason": null
 			},
 			{
 				"isPresent": false,
 				"status": "Absent",
-				"date": "03-04-2025",
-				"day": "THU",
-				"time": "14:00-14:50",
-				"slot": "D2",
-				"reason": "Student Punched After Faculty End Punch"
-			},
-			{
-				"isPresent": true,
-				"status": "On Duty",
-				"date": "02-04-2025",
-				"day": "WED",
-				"time": "14:00-14:50",
-				"slot": "D2",
-				"reason": null
-			},
-			{
-				"isPresent": false,
-				"status": "Not Posted",
-				"date": "01-04-2025",
+				"date": "02-01-2025",
 				"day": "TUE",
 				"time": "14:00-14:50",
-				"slot": "D2",
-				"reason": null
+				"slot": "A1",
+				"reason": "Student Punched After Faculty End Punch"
 			}
 		]
 	}
@@ -138,10 +127,6 @@ Fetches detailed attendance logs for a particular course.
 ## ✅ Notes
 
 - Cookies and tokens are required and must match the session generated from login.
-- You can use `/api/login` and `/api/getcaptcha` to initialize sessions.
+- You can use `/api/getcaptcha` and `/api/login` to initialize sessions.
 
 ---
-
-```
-
-```
