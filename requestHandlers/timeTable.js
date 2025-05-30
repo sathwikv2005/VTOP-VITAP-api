@@ -43,7 +43,7 @@ export async function timeTable(req, res) {
 
 		return res.json( timeTable )
 	} catch (error) {
-		console.error('Error fetching time table:', err)
+		console.error('Error fetching time table:', error)
 		res.status(500).json({ error: 'Failed to fetch time table' })
 	}
 }
