@@ -7,6 +7,10 @@ dotenv.config()
 const port = process.env.PORT || 6700
 const app = express()
 
+app.use('/ping', (req, res) => {
+	res.status(200).send('OK')
+})
+
 app.use('/api', apiRoute)
 
 app.listen(port, () => {
