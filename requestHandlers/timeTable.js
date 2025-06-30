@@ -18,9 +18,9 @@ export async function timeTable(req, res) {
 		const params = new URLSearchParams()
 		params.append('_csrf', csrf)
 		params.append('semesterSubId', semID)
-		params.append('authorizedID', username)
-		params.append('x', new Date().toUTCString())
-
+		params.append('authorizedID', username.toUpperCase())
+		params.append('x', new Date().toUTCString()) 
+		
 		const response = await fetch(VtopConfig.domain + VtopConfig.backEndApi.viewTimeTable, {
 			method: 'POST',
 			headers: {
