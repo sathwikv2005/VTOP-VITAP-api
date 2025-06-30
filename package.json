@@ -11,6 +11,7 @@
 	"author": "sathwikv2005",
 	"license": "ISC",
 	"dependencies": {
+		"canvas": "^3.1.2",
 		"dotenv": "^16.5.0",
 		"express": "^5.1.0",
 		"fetch-cookie": "^3.1.0",
