@@ -14,10 +14,9 @@ export async function getCaptcha(req, res) {
 	const fetchWithCookies = fetchCookie(fetch, jar)
 	try {
 		//Get csrf token
-		var response = await fetchWithCookies(VtopConfig.domain + VtopConfig.vtopUrls.login, {
+		var response = await fetchWithCookies(VtopConfig.domain + VtopConfig.backEndApi.prelogin, {
 			headers: {
-				Accept:
-					'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+				...Headers,
 			},
 		})
 
@@ -30,8 +29,7 @@ export async function getCaptcha(req, res) {
 			VtopConfig.domain + VtopConfig.backEndApi.prelogin + `?_csrf=${csrf}&flag=VTOP`,
 			{
 				headers: {
-					Accept:
-						'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+					...Headers,
 				},
 			}
 		)
@@ -123,10 +121,9 @@ export async function loginAutoCaptcha(req,res) {
 	if (!pwd) pwd = process.env.PASSWORD //use default creds from .env
 	try {
 		//Get csrf token
-		var response = await fetchWithCookies(VtopConfig.domain + VtopConfig.vtopUrls.login, {
+		var response = await fetchWithCookies(VtopConfig.domain + VtopConfig.backEndApi.prelogin, {
 			headers: {
-				Accept:
-					'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+				...Headers,
 			},
 		})
 
@@ -139,8 +136,7 @@ export async function loginAutoCaptcha(req,res) {
 			VtopConfig.domain + VtopConfig.backEndApi.prelogin + `?_csrf=${csrf}&flag=VTOP`,
 			{
 				headers: {
-					Accept:
-						'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+					...Headers,
 				},
 			}
 		)
