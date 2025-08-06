@@ -8,7 +8,7 @@ const router = express.Router()
 
 router.get('/getcaptcha', getCaptcha)
 router.get('/login', vtopLogin)
-router.get('/login/autocaptcha', loginAutoCaptcha)
+router.post('/login/autocaptcha', loginAutoCaptcha)
 router.get('/semids', getSemIds)
 router.get('/timetable', timeTable)
 router.get('/attendance', getAttendance)

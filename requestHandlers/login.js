@@ -114,7 +114,7 @@ export async function vtopLogin(req, res) {
 }
 
 export async function loginAutoCaptcha(req,res) {
-	var { username, pwd } = req.query
+	var { username, pwd } = req.body
 	let jar = new CookieJar()
 	const fetchWithCookies = fetchCookie(fetch, jar)
 	if (!username) username = process.env.USER_NAME //use default creds from .env
