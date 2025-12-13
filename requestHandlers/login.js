@@ -6,6 +6,11 @@ import VtopConfig from '../vtop_config.json' with { type: 'json' }
 import Headers from '../headers.json' with { type: 'json' }
 import { CookieJar } from 'tough-cookie'
 import { solveCaptcha } from '../util/captcha/captchaSolver.js'
+import https from 'https'
+
+const insecureAgent = new https.Agent({
+	rejectUnauthorized: false,
+})
 
 dotenv.config()
 
@@ -18,6 +23,7 @@ export async function getCaptcha(req, res) {
 			headers: {
 				...Headers,
 			},
+			agent: insecureAgent,
 		})
 
 		const html = await response.text()
@@ -31,6 +37,7 @@ export async function getCaptcha(req, res) {
 				headers: {
 					...Headers,
 				},
+				agent: insecureAgent,
 			}
 		)
 
@@ -40,7 +47,9 @@ export async function getCaptcha(req, res) {
 
 		//Get captcha.
 		const captchaResponse = await fetchWithCookies(
-			VtopConfig.domain + VtopConfig.backEndApi.newCaptcha
+			VtopConfig.domain + VtopConfig.backEndApi.newCaptcha,{
+				agent: insecureAgent,
+			}
 		)
 
 		const captchaHtml = await captchaResponse.text()
@@ -81,6 +90,7 @@ export async function vtopLogin(req, res) {
 				...Headers,
                 Cookie: `JSESSIONID=${jsessionId}`
 			},
+			agent: insecureAgent,
 			body: loginParams.toString(),
 		})
 		
@@ -125,6 +135,7 @@ export async function loginAutoCaptcha(req,res) {
 			headers: {
 				...Headers,
 			},
+			agent: insecureAgent,
 		})
 
 		let html = await response.text()
@@ -138,6 +149,7 @@ export async function loginAutoCaptcha(req,res) {
 				headers: {
 					...Headers,
 				},
+				agent: insecureAgent,
 			}
 		)
 
@@ -147,7 +159,9 @@ export async function loginAutoCaptcha(req,res) {
 
 		//Get captcha.
 		const captchaResponse = await fetchWithCookies(
-			VtopConfig.domain + VtopConfig.backEndApi.newCaptcha
+			VtopConfig.domain + VtopConfig.backEndApi.newCaptcha,{
+				agent: insecureAgent,
+			}
 		)
 
 		const captchaHtml = await captchaResponse.text()
@@ -176,6 +190,7 @@ export async function loginAutoCaptcha(req,res) {
 				...Headers,
                 Cookie: `JSESSIONID=${jsessionId}`
 			},
+			agent: insecureAgent,
 			body: loginParams.toString(),
 		})
 		
