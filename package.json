@@ -16,7 +16,7 @@
 		"express": "^5.1.0",
 		"fetch-cookie": "^3.1.0",
 		"linkedom": "^0.18.9",
-		"node-fetch": "^3.3.2",
-		"tough-cookie": "^5.1.2"
+		"tough-cookie": "^5.1.2",
+		"undici": "^7.22.0"
 	}
 }

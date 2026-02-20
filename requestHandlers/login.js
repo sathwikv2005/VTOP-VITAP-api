@@ -1,227 +1,213 @@
 import dotenv from 'dotenv'
-import fetch from 'node-fetch'
 import fetchCookie from 'fetch-cookie'
 import { parseHTML } from 'linkedom'
 import VtopConfig from '../vtop_config.json' with { type: 'json' }
 import Headers from '../headers.json' with { type: 'json' }
 import { CookieJar } from 'tough-cookie'
 import { solveCaptcha } from '../util/captcha/captchaSolver.js'
-import https from 'https'
-
-const insecureAgent = new https.Agent({
-	rejectUnauthorized: false,
-})
+import fs from 'fs'
+import path from 'path'
+import { Agent as UndiciAgent } from 'undici'
 
 dotenv.config()
+
+const vtopIntermediate = fs.readFileSync(path.resolve('certs/vtop_ca.pem'))
+
+const sectigoRoot = fs.readFileSync(path.resolve('certs/sectigo_root_r46.pem'))
+
+const undiciAgent = new UndiciAgent({
+	connect: {
+		ca: [vtopIntermediate, sectigoRoot],
+		rejectUnauthorized: true,
+	},
+})
+
+const fetch = fetchCookie(globalThis.fetch)
 
 export async function getCaptcha(req, res) {
 	const jar = new CookieJar()
 	const fetchWithCookies = fetchCookie(fetch, jar)
+
 	try {
-		//Get csrf token
-		var response = await fetchWithCookies(VtopConfig.domain + VtopConfig.backEndApi.prelogin, {
-			headers: {
-				...Headers,
-			},
-			agent: insecureAgent,
+		let response = await fetchWithCookies(VtopConfig.domain + VtopConfig.backEndApi.prelogin, {
+			headers: { ...Headers },
+			dispatcher: undiciAgent,
 		})
 
-		const html = await response.text()
-		var { document } = parseHTML(html)
+		let html = await response.text()
+		let { document } = parseHTML(html)
 		const csrf = document.querySelector('input[name="_csrf"]').value
 
-		//Create a session with VTOP server at /vtop/preLoginSetup
-		var response = await fetchWithCookies(
-			VtopConfig.domain + VtopConfig.backEndApi.prelogin + `?_csrf=${csrf}&flag=VTOP`,
+		// Session setup
+		response = await fetchWithCookies(
+			`${VtopConfig.domain}${VtopConfig.backEndApi.prelogin}?_csrf=${csrf}&flag=VTOP`,
 			{
-				headers: {
-					...Headers,
-				},
-				agent: insecureAgent,
-			}
+				headers: { ...Headers },
+				dispatcher: undiciAgent,
+			},
 		)
 
-		//Get the sessionID
+		// Get session cookie
 		const cookies = await jar.getCookies(VtopConfig.domain + '/vtop')
 		const jsessionId = cookies.find((c) => c.key === 'JSESSIONID')
 
-		//Get captcha.
-		const captchaResponse = await fetchWithCookies(
-			VtopConfig.domain + VtopConfig.backEndApi.newCaptcha,{
-				agent: insecureAgent,
-			}
-		)
+		// Get captcha
+		response = await fetchWithCookies(VtopConfig.domain + VtopConfig.backEndApi.newCaptcha, {
+			dispatcher: undiciAgent,
+		})
 
-		const captchaHtml = await captchaResponse.text()
-		var { document } = parseHTML(captchaHtml)
+		html = await response.text()
+		;({ document } = parseHTML(html))
 		const img = document.querySelector('img')
-		const src = img?.getAttribute('src') //Captch url
+		const captchaUrl = img?.getAttribute('src')
 
-		
-		//The csrf token is required for the /api/login endpoint
-		res.json({ captcha: src, csrf, jsessionId, next: `http://127.0.0.1:6700/api/login?csrf=${csrf}&jsessionId=${jsessionId.value}&captchaStr=`  })
+		res.json({
+			captcha: captchaUrl,
+			csrf,
+			jsessionId,
+			next: `http://127.0.0.1:6700/api/login?csrf=${csrf}&jsessionId=${jsessionId.value}&captchaStr=`,
+		})
 	} catch (err) {
-		console.error('Error fetching page:', err)
+		console.error('Error fetching captcha:', err)
 		res.status(500).json({ error: 'Failed to fetch captcha' })
 	}
 }
 
 export async function vtopLogin(req, res) {
-	var { username, pwd, captchaStr, csrf, jsessionId } = req.query
+	let { username, pwd, captchaStr, csrf, jsessionId } = req.query
+
 	const jar = new CookieJar()
 	const fetchWithCookies = fetchCookie(fetch, jar)
-	if (!username) username = process.env.USER_NAME //use default creds from .env
-	if (!pwd) pwd = process.env.PASSWORD //use default creds from .env
+
+	if (!username) username = process.env.USER_NAME
+	if (!pwd) pwd = process.env.PASSWORD
 
 	try {
-		if (!username || !pwd || !captchaStr || !csrf || !jsessionId)
-			return res.status(400).json({ error: 'BAD REQUEST. Missing parameters. Failed to login' })
-		// Prepare form data for login
-		const loginParams = new URLSearchParams()
-		loginParams.append('username', username.toUpperCase())
-		loginParams.append('password', pwd)
-		loginParams.append('captchaStr', captchaStr.toUpperCase())
-		loginParams.append('_csrf', csrf)
+		if (!username || !pwd || !captchaStr || !csrf || !jsessionId) {
+			return res.status(400).json({ error: 'Missing parameters' })
+		}
 
-		// Send POST request for login
+		const form = new URLSearchParams({
+			username: username.toUpperCase(),
+			password: pwd,
+			captchaStr: captchaStr.toUpperCase(),
+			_csrf: csrf,
+		})
+
 		const response = await fetchWithCookies(VtopConfig.domain + VtopConfig.vtopUrls.login, {
 			method: 'POST',
 			headers: {
 				...Headers,
-                Cookie: `JSESSIONID=${jsessionId}`
+				Cookie: `JSESSIONID=${jsessionId}`,
 			},
-			agent: insecureAgent,
-			body: loginParams.toString(),
+			body: form.toString(),
+			dispatcher: undiciAgent,
 		})
-		
-
-		// Session not found
-		if (response.status === 404)
-			return res.status(401).json({ error: 'Unauthorized. Invalid csrf or session ID' })
 
 		const html = await response.text()
-
-		var { document } = parseHTML(html)
+		const { document } = parseHTML(html)
 
 		const errorSpan = document.querySelector('span.text-danger.text-center[role="alert"]')
 		const errorText = errorSpan?.textContent.trim()
 
 		if (errorText) {
-			//Invalid username, password or captcha
 			return res.status(401).json({ error: errorText })
 		}
 
-		//Get new csrf Token
-		var csrf = document.querySelector('input[name="_csrf"]')?.value
+		const newCsrf = document.querySelector('input[name="_csrf"]')?.value
+		const cookies = await jar.getCookies(VtopConfig.domain + '/vtop')
 
-		var cookies = await jar.getCookies(VtopConfig.domain + '/vtop') //Contains new session cookie
-
-		res.json({ message: 'Login successful', cookies, csrf, html })
+		res.json({
+			message: 'Login successful',
+			csrf: newCsrf,
+			cookies,
+		})
 	} catch (err) {
-		console.error('Error during login:', err)
-		res.status(500).json({ error: 'Failed to login' })
+		console.error('Login error:', err)
+		res.status(500).json({ error: 'Login failed' })
 	}
 }
 
-export async function loginAutoCaptcha(req,res) {
-	var { username, pwd } = req.body
-	let jar = new CookieJar()
+export async function loginAutoCaptcha(req, res) {
+	let { username, pwd } = req.body
+
+	const jar = new CookieJar()
 	const fetchWithCookies = fetchCookie(fetch, jar)
-	if (!username) username = process.env.USER_NAME //use default creds from .env
-	if (!pwd) pwd = process.env.PASSWORD //use default creds from .env
+
+	if (!username) username = process.env.USER_NAME
+	if (!pwd) pwd = process.env.PASSWORD
+
 	try {
-		//Get csrf token
-		var response = await fetchWithCookies(VtopConfig.domain + VtopConfig.backEndApi.prelogin, {
-			headers: {
-				...Headers,
-			},
-			agent: insecureAgent,
+		// Prelogin
+		let response = await fetchWithCookies(VtopConfig.domain + VtopConfig.backEndApi.prelogin, {
+			headers: { ...Headers },
+			dispatcher: undiciAgent,
 		})
 
 		let html = await response.text()
-		var { document } = parseHTML(html)
-		var csrf = document.querySelector('input[name="_csrf"]').value
+		let { document } = parseHTML(html)
+		let csrf = document.querySelector('input[name="_csrf"]').value
 
-		//Create a session with VTOP server at /vtop/preLoginSetup
 		response = await fetchWithCookies(
-			VtopConfig.domain + VtopConfig.backEndApi.prelogin + `?_csrf=${csrf}&flag=VTOP`,
+			`${VtopConfig.domain}${VtopConfig.backEndApi.prelogin}?_csrf=${csrf}&flag=VTOP`,
 			{
-				headers: {
-					...Headers,
-				},
-				agent: insecureAgent,
-			}
+				headers: { ...Headers },
+				dispatcher: undiciAgent,
+			},
 		)
 
-		//Get the sessionID
-		var cookies = await jar.getCookies(VtopConfig.domain + '/vtop')
-		let jsessionId = cookies.find((c) => c.key === 'JSESSIONID')?.value
+		const cookies = await jar.getCookies(VtopConfig.domain + '/vtop')
+		const jsessionId = cookies.find((c) => c.key === 'JSESSIONID')?.value
 
-		//Get captcha.
-		const captchaResponse = await fetchWithCookies(
-			VtopConfig.domain + VtopConfig.backEndApi.newCaptcha,{
-				agent: insecureAgent,
-			}
-		)
+		// Captcha
+		response = await fetchWithCookies(VtopConfig.domain + VtopConfig.backEndApi.newCaptcha, {
+			dispatcher: undiciAgent,
+		})
 
-		const captchaHtml = await captchaResponse.text()
-		var { document } = parseHTML(captchaHtml)
+		html = await response.text()
+		;({ document } = parseHTML(html))
 		const img = document.querySelector('img')
-		const src = img?.getAttribute('src') //Captch url
+		const captchaUrl = img?.getAttribute('src')
 
-		
-		//solve captcha
-		const captchaStr = await solveCaptcha(src)
+		const captchaStr = await solveCaptcha(captchaUrl)
 
-		//login
-		if (!username || !pwd || !captchaStr || !csrf || !jsessionId)
-			return res.status(400).json({ error: 'BAD REQUEST. Missing parameters. Failed to login' })
-		// Prepare form data for login
-		const loginParams = new URLSearchParams()
-		loginParams.append('username', username.toUpperCase())
-		loginParams.append('password', pwd)
-		loginParams.append('captchaStr', captchaStr.toUpperCase())
-		loginParams.append('_csrf', csrf)
+		const form = new URLSearchParams({
+			username: username.toUpperCase(),
+			password: pwd,
+			captchaStr: captchaStr.toUpperCase(),
+			_csrf: csrf,
+		})
 
-		// Send POST request for login
 		response = await fetchWithCookies(VtopConfig.domain + VtopConfig.vtopUrls.login, {
 			method: 'POST',
 			headers: {
 				...Headers,
-                Cookie: `JSESSIONID=${jsessionId}`
+				Cookie: `JSESSIONID=${jsessionId}`,
 			},
-			agent: insecureAgent,
-			body: loginParams.toString(),
+			body: form.toString(),
+			dispatcher: undiciAgent,
 		})
-		
-
-		// Session not found
-		if (response.status === 404)
-			return res.status(401).json({ error: 'Unauthorized. Invalid csrf or session ID' })
 
 		html = await response.text()
-
-		var { document } = parseHTML(html)
+		;({ document } = parseHTML(html))
 
 		const errorSpan = document.querySelector('span.text-danger.text-center[role="alert"]')
 		const errorText = errorSpan?.textContent.trim()
 
 		if (errorText) {
-			//Invalid username, password or captcha
 			return res.status(401).json({ error: errorText })
 		}
 
-		//Get new csrf Token
 		csrf = document.querySelector('input[name="_csrf"]')?.value
+		const finalCookies = await jar.getCookies(VtopConfig.domain + '/vtop')
 
-		cookies = await jar.getCookies(VtopConfig.domain + '/vtop') //Contains new session cookie
-
-		res.json({ message: 'Login successful', cookies, csrf, html })
-		
-
+		res.json({
+			message: 'Login successful',
+			csrf,
+			cookies: finalCookies,
+		})
 	} catch (err) {
-		console.error('Error fetching page:', err)
-		res.status(500).json({ error: 'Failed to login with auto captcha' })
+		console.error('Auto login error:', err)
+		res.status(500).json({ error: 'Auto login failed' })
 	}
-	
 }
