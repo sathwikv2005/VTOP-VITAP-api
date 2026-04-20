@@ -4,6 +4,23 @@ import parseTimeTable from '../util/parse/parseTimeTable.js'
 import VtopConfig from '../vtop_config.json' with { type: 'json' }
 import Headers from '../headers.json' with { type: 'json' }
 
+import fs from 'fs'
+import path from 'path'
+import { Agent as UndiciAgent } from 'undici'
+
+dotenv.config()
+
+const vtopIntermediate = fs.readFileSync(path.resolve('certs/vtop_ca.pem'))
+
+const sectigoRoot = fs.readFileSync(path.resolve('certs/sectigo_root_r46.pem'))
+
+const undiciAgent = new UndiciAgent({
+	connect: {
+		ca: [vtopIntermediate, sectigoRoot],
+		rejectUnauthorized: true,
+	},
+})
+
 dotenv.config()
 
 export async function timeTable(req, res) {
@@ -19,8 +36,8 @@ export async function timeTable(req, res) {
 		params.append('_csrf', csrf)
 		params.append('semesterSubId', semID)
 		params.append('authorizedID', username.toUpperCase())
-		params.append('x', new Date().toUTCString()) 
-		
+		params.append('x', new Date().toUTCString())
+
 		const response = await fetch(VtopConfig.domain + VtopConfig.backEndApi.viewTimeTable, {
 			method: 'POST',
 			headers: {
@@ -28,6 +45,7 @@ export async function timeTable(req, res) {
 				Cookie: `JSESSIONID=${jsessionId}`,
 			},
 			body: params.toString(),
+			dispatcher: undiciAgent,
 		})
 
 		// Session not found
@@ -41,7 +59,7 @@ export async function timeTable(req, res) {
 
 		const timeTable = parseTimeTable(document)
 
-		return res.json( timeTable )
+		return res.json(timeTable)
 	} catch (error) {
 		console.error('Error fetching time table:', error)
 		res.status(500).json({ error: 'Failed to fetch time table' })

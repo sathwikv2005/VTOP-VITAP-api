@@ -1,4 +1,5 @@
 export default function parseTimeTable(document) {
+	const courseMap = getCourseTitleMap(document)
 	const table = document.querySelector('#timeTableStyle')
 	const rows = Array.from(table.querySelectorAll('tr'))
 
@@ -44,10 +45,13 @@ export default function parseTimeTable(document) {
 				// only push registered slots
 				const textArray = text.split('-').slice(0, -1) //[slot, courseCode, ELA/ETH/TH/LA, roomno, block, blockno?]
 				const venue = `${textArray[3]}, ${textArray[4]}${textArray[5] ? `-${textArray[5]}` : ''}`
+				const courseCode = textArray[1]
+
 				classes.push({
 					type: 'theory',
 					slot: textArray[0],
-					courseCode: textArray[1],
+					courseCode,
+					courseTitle: courseMap[courseCode] || courseCode,
 					venue,
 					class: text,
 					timings: {
@@ -64,10 +68,13 @@ export default function parseTimeTable(document) {
 				// only push registered slots
 				const textArray = text.split('-').slice(0, -1) //[slot, courseCode, ELA/ETH/TH/LA, roomno, block, blockno?]
 				const venue = `${textArray[3]}, ${textArray[4]}${textArray[5] ? `-${textArray[5]}` : ''}`
+				const courseCode = textArray[1]
+
 				classes.push({
 					type: 'lab',
 					slot: textArray[0],
-					courseCode: textArray[1],
+					courseCode,
+					courseTitle: courseMap[courseCode] || courseCode,
 					venue,
 					class: text,
 					timings: {
@@ -83,4 +90,28 @@ export default function parseTimeTable(document) {
 		})
 	}
 	return timetable
+}
+
+function getCourseTitleMap(document) {
+	const courseMap = {}
+	const rows = Array.from(document.querySelectorAll('#getStudentDetails table tr'))
+
+	rows.forEach((row) => {
+		const cols = row.querySelectorAll('td')
+		if (cols.length < 3) return
+
+		const courseCell = cols[2]
+		const pTags = Array.from(courseCell.querySelectorAll('p'))
+
+		if (!pTags[0]) return
+
+		const text = pTags[0].textContent.trim()
+		const [code, title] = text.split(' - ')
+
+		if (code && title) {
+			courseMap[code.trim()] = title.trim()
+		}
+	})
+
+	return courseMap
 }

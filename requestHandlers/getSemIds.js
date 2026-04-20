@@ -6,6 +6,23 @@ import parseSemIDs from '../util/parse/parseSemIDs.js'
 
 dotenv.config()
 
+import fs from 'fs'
+import path from 'path'
+import { Agent as UndiciAgent } from 'undici'
+
+dotenv.config()
+
+const vtopIntermediate = fs.readFileSync(path.resolve('certs/vtop_ca.pem'))
+
+const sectigoRoot = fs.readFileSync(path.resolve('certs/sectigo_root_r46.pem'))
+
+const undiciAgent = new UndiciAgent({
+	connect: {
+		ca: [vtopIntermediate, sectigoRoot],
+		rejectUnauthorized: true,
+	},
+})
+
 export async function getSemIds(req, res) {
 	var { csrf, jsessionId, username } = req.query
 	if (!username) username = process.env.USER_NAME
@@ -19,13 +36,14 @@ export async function getSemIds(req, res) {
 		params.append('_csrf', csrf)
 		params.append('nocache', '@(new Date().getTime())')
 
-		const response = await fetch(VtopConfig.domain+VtopConfig.backEndApi.studentTimeTable, {
+		const response = await fetch(VtopConfig.domain + VtopConfig.backEndApi.studentTimeTable, {
 			method: 'POST',
 			headers: {
 				...Headers,
-                Cookie: `JSESSIONID=${jsessionId}`
+				Cookie: `JSESSIONID=${jsessionId}`,
 			},
 			body: params.toString(),
+			dispatcher: undiciAgent,
 		})
 
 		// Session not found
@@ -39,7 +57,7 @@ export async function getSemIds(req, res) {
 
 		const semesters = parseSemIDs(document)
 
-        return res.status(200).json(semesters)
+		return res.status(200).json(semesters)
 	} catch (error) {
 		console.error('Failed to fetch semIDs. Error:\n', error)
 		res.status(500).json({ error: 'Failed to fetch semIDs.' })

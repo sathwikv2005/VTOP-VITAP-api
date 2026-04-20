@@ -129,7 +129,10 @@ export async function vtopLogin(req, res) {
 }
 
 export async function loginAutoCaptcha(req, res) {
-	let { username, pwd } = req.body
+	let username, pwd
+	if (req.body) {
+		;({ username, pwd } = req.body)
+	}
 
 	const jar = new CookieJar()
 	const fetchWithCookies = fetchCookie(fetch, jar)

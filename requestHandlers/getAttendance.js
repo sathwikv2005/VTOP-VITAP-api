@@ -5,6 +5,21 @@ import VtopConfig from '../vtop_config.json' with { type: 'json' }
 import Headers from '../headers.json' with { type: 'json' }
 
 import fs from 'fs'
+import path from 'path'
+import { Agent as UndiciAgent } from 'undici'
+
+dotenv.config()
+
+const vtopIntermediate = fs.readFileSync(path.resolve('certs/vtop_ca.pem'))
+
+const sectigoRoot = fs.readFileSync(path.resolve('certs/sectigo_root_r46.pem'))
+
+const undiciAgent = new UndiciAgent({
+	connect: {
+		ca: [vtopIntermediate, sectigoRoot],
+		rejectUnauthorized: true,
+	},
+})
 
 dotenv.config()
 
@@ -30,6 +45,7 @@ export async function getAttendance(req, res) {
 				Cookie: `JSESSIONID=${jsessionId}`,
 			},
 			body: params.toString(),
+			dispatcher: undiciAgent,
 		})
 
 		// Session not found
