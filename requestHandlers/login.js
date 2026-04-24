@@ -166,9 +166,9 @@ export async function loginAutoCaptcha(req, res) {
 		response = await fetchWithCookies(VtopConfig.domain + VtopConfig.backEndApi.newCaptcha, {
 			dispatcher: undiciAgent,
 		})
-
 		html = await response.text()
 		;({ document } = parseHTML(html))
+
 		const img = document.querySelector('img')
 		const captchaUrl = img?.getAttribute('src')
 
@@ -197,12 +197,12 @@ export async function loginAutoCaptcha(req, res) {
 		const errorSpan = document.querySelector('span.text-danger.text-center[role="alert"]')
 		const errorText = errorSpan?.textContent.trim()
 
-		if (errorText) {
-			return res.status(401).json({ error: errorText })
-		}
-
 		csrf = document.querySelector('input[name="_csrf"]')?.value
 		const finalCookies = await jar.getCookies(VtopConfig.domain + '/vtop')
+
+		if (errorText) {
+			return res.status(401).json({ error: errorText, csrf, cookies: jsessionId })
+		}
 
 		res.json({
 			message: 'Login successful',
@@ -212,5 +212,60 @@ export async function loginAutoCaptcha(req, res) {
 	} catch (err) {
 		console.error('Auto login error:', err)
 		res.status(500).json({ error: 'Auto login failed' })
+	}
+}
+
+export async function validateOtp(req, res) {
+	var { csrf, jsessionId, otp } = req.query
+	if (!csrf || !jsessionId || !otp)
+		return res.status(400).json({ error: 'BAD REQUEST. Missing parameters.' })
+
+	const jar = new CookieJar()
+	const fetchWithCookies = fetchCookie(fetch, jar)
+
+	try {
+		const params = new URLSearchParams()
+		params.append('otpCode', otp)
+		params.append('_csrf', csrf)
+
+		let response = await fetchWithCookies(VtopConfig.domain + VtopConfig.backEndApi.validateotp, {
+			method: 'POST',
+			headers: {
+				...Headers,
+				Cookie: `JSESSIONID=${jsessionId}`,
+			},
+			body: params.toString(),
+			dispatcher: undiciAgent,
+		})
+
+		if (response.status === 404)
+			return res.status(401).json({ error: 'Unauthorized. Invalid csrf or session ID' })
+
+		if (!response.ok) return res.status(response.status).json({ error: response.statusText })
+		const json = await response.json()
+
+		if (json.status !== 'SUCCESS') {
+			return res.status(401).json({ error: json.message, csrf, jsessionId })
+		}
+
+		response = await fetchWithCookies(VtopConfig.domain + json.redirectUrl, {
+			method: 'GET',
+			headers: {
+				...Headers,
+				Cookie: `JSESSIONID=${jsessionId}`,
+			},
+			dispatcher: undiciAgent,
+		})
+
+		var html = await response.text()
+		var { document } = parseHTML(html)
+
+		const csrfInputs = document.querySelectorAll('input[name="_csrf"]')
+		csrf = csrfInputs[csrfInputs.length - 1]?.value
+
+		return res.status(200).json({ message: 'ok', jsessionId, csrf })
+	} catch (err) {
+		console.error('OTP validation error:', err)
+		res.status(500).json({ error: 'OTP validation failed' })
 	}
 }

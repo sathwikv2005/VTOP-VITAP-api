@@ -7,6 +7,9 @@
 	"backEndApi": {
 		"newCaptcha": "/vtop/get/new/captcha",
 		"prelogin": "/vtop/prelogin/setup",
+		"openpage": "/vtop/open/page",
+		"initpage": "/vtop/init/page",
+		"validateotp": "/vtop/validateSecurityOtp",
 		"studentTimeTable": "/vtop/academics/common/StudentTimeTable",
 		"viewTimeTable": "/vtop/processViewTimeTable",
 		"ViewStudentAttendance": "/vtop/processViewStudentAttendance",

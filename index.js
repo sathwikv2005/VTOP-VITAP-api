@@ -7,6 +7,7 @@ dotenv.config()
 const port = process.env.PORT || 6700
 const app = express()
 
+app.use(express.urlencoded({ extended: true }))
 app.use(express.json())
 
 app.get('/ping', (req, res) => {
